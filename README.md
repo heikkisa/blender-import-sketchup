@@ -8,18 +8,16 @@ If you are having problems that are not mentioned in the *Troubleshooting*-secti
 Download
 --------
 
-Current release is [1.0.0](release/blender-import-sketchup-1.0.0.zip?raw=true).
-
-Old releases are also located in the [release](release/) directory.
+Use the "Download ZIP"-button on the GitHub. You can also directly copy and paste the actual [import script](src/import_sketchup.py) to your machine.
 
 Installation
 ------------
 
-Install by selecting
+Unzip the downloaded archive and install the importer in Blender by selecting
 
  - User Preferences... -> Addons -> Install from File...
 
-Select the .zip file you have downloaded. The importer should then be listed in the **Import-Export** section. Remember to enable it and save the settings if you want to keep it enabled after restarting Blender.
+Select the *import_sketchup.py* file you have downloaded. The importer should then be listed in the **Import-Export** section. Remember to enable it and also save the settings if you want to keep it enabled after restarting Blender.
 
 After enabling it you should see an entry "File -> Import -> SketchUp (.kmz/.dae)" in the Blender menu.
 
