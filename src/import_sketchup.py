@@ -2,7 +2,7 @@
 bl_info = {
     "name": "SketchUp Collada and KMZ format",
     "author": "Heikki Salo",
-    "version": (1, 0, 0),
+    "version": (1, 0, 1),
     "blender": (2, 70, 0),
     "location": "File > Import-Export",
     "description": "Import SketchUp .dae and .kmz files",
@@ -50,6 +50,33 @@ def pack_loaded_images(old_images):
         if img not in old_images:
             img.pack()
 
+def find_duplicate_faces(mesh):
+    found = {}
+    for face in mesh.data.polygons:
+        facevertsorted = str(sorted(face.vertices[:]))
+        if facevertsorted in found:
+            found[facevertsorted].append(face.index)
+        else:
+            found[facevertsorted] = [face.index]
+
+    results = {}
+    for k, v in found.items():
+        if len(v) > 1:
+            results[k] = v
+
+    return results
+
+def find_best_face(mesh, indices):
+    best = indices[1]
+    for index in indices:
+        mat = mesh.data.materials[mesh.data.polygons[index].material_index]
+        if mat and mat.active_texture:
+            #Prefer textured faces
+            best = index
+            break
+
+    return best
+
 def fix_faces(tris_to_quads):
     #See http://www.elysiun.com/forum/showthread.php?278694-how-to-remove-doubled-faces-that-allready-have-the-same-vertices
     for obj in bpy.context.selected_objects:
@@ -58,20 +85,21 @@ def fix_faces(tris_to_quads):
             bpy.ops.object.mode_set(mode="OBJECT", toggle=False) #Set 3D View to Object Mode (probably redundant)
             bpy.ops.object.mode_set(mode="EDIT", toggle=False) #Set 3D View to Edit Mode
             bpy.context.tool_settings.mesh_select_mode = [False, False, True] #Set to face select in 3D View Editor
-            bpy.ops.mesh.select_all(action="SELECT") #Make sure all faces in mesh are selected
+            bpy.ops.mesh.select_all(action="DESELECT") #Make sure all faces in mesh are selected
 
             if tris_to_quads:
                 bpy.ops.mesh.tris_convert_to_quads()
 
             bpy.ops.object.mode_set(mode="OBJECT", toggle=False) #You have to be in object mode to select faces
 
-            found = set([]) #Set of found sorted vertices pairs
+            duplicates = find_duplicate_faces(obj)
+            for face in duplicates:
+                indices = duplicates[face]
+                for index in indices:
+                    obj.data.polygons[index].select = True
 
-            for face in obj.data.polygons:
-                facevertsorted = sorted(face.vertices[:])           #Sort vertices of the face to compare later
-                if str(facevertsorted) not in found:                #If sorted vertices are not in the set
-                    found.add(str(facevertsorted))                  #Add them in the set
-                    obj.data.polygons[face.index].select = False    #Deselect faces we want to keep
+                #Save the best face
+                obj.data.polygons[find_best_face(obj, indices)].select = False
 
             bpy.ops.object.mode_set(mode="EDIT", toggle=False)      #Set to Edit Mode AGAIN
             bpy.ops.mesh.delete(type="FACE")                        #Delete double faces
