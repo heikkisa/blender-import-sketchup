@@ -77,7 +77,7 @@ def find_best_face(mesh, indices):
 
     return best
 
-def fix_faces(tris_to_quads):
+def fix_faces():
     #See http://www.elysiun.com/forum/showthread.php?278694-how-to-remove-doubled-faces-that-allready-have-the-same-vertices
     for obj in bpy.context.selected_objects:
         if obj.type == "MESH":
@@ -85,10 +85,7 @@ def fix_faces(tris_to_quads):
             bpy.ops.object.mode_set(mode="OBJECT", toggle=False) #Set 3D View to Object Mode (probably redundant)
             bpy.ops.object.mode_set(mode="EDIT", toggle=False) #Set 3D View to Edit Mode
             bpy.context.tool_settings.mesh_select_mode = [False, False, True] #Set to face select in 3D View Editor
-            bpy.ops.mesh.select_all(action="DESELECT") #Make sure all faces in mesh are selected
-
-            if tris_to_quads:
-                bpy.ops.mesh.tris_convert_to_quads()
+            bpy.ops.mesh.select_all(action="DESELECT") #Make sure all faces in mesh are unselected
 
             bpy.ops.object.mode_set(mode="OBJECT", toggle=False) #You have to be in object mode to select faces
 
@@ -125,7 +122,6 @@ def import_colladas(paths):
 def load(operator, context, **args):
     filepath = args["filepath"]
     fix_duplicate_faces = args["fix_duplicate_faces"]
-    tris_to_quads = args["tris_to_quads"]
     add_parent = args["add_parent"]
     pack_images = args["pack_images"]
 
@@ -149,7 +145,7 @@ def load(operator, context, **args):
         raise RuntimeError("Unknown extension: %s" % ext)
 
     if fix_duplicate_faces:
-        fix_faces(tris_to_quads)
+        fix_faces()
 
     if pack_images:
         pack_loaded_images(old_images)
@@ -176,11 +172,6 @@ class ImportSketchUp(bpy.types.Operator, ImportHelper):
             description="Remove duplicate faces from imported objects. Can be slow.",
             default=True)
 
-    tris_to_quads = BoolProperty(
-            name="Triangles to quads",
-            description="Convert triangles to quads.",
-            default=False)
-
     add_parent = BoolProperty(
             name="Add a parent object",
             description="Add a parent root object for imported objects.",
@@ -199,11 +190,6 @@ class ImportSketchUp(bpy.types.Operator, ImportHelper):
         layout = self.layout
         col = layout.column(align=True)
         col.prop(self, "fix_duplicate_faces")
-
-        row = col.row()
-        row.enabled = self.fix_duplicate_faces
-        row.prop(self, "tris_to_quads")
-
         col.prop(self, "add_parent")
         col.prop(self, "pack_images")
 

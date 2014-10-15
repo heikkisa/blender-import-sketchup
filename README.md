@@ -30,10 +30,6 @@ Importer Options
 
 Attempts to remove duplicate faces. This is important because otherwise it can lead to some pretty nasty z-fighting which usually causes black shadow "acne" or artifacts when rendering the scene with lights. Most of the time this should be left enabled. This option is not very optimized so it might take a while when importing large or complex models.
 
-**Triangles to quads**
-
-Convert triangles to quads. This can make it easier to modify and tweak the model after importing because there will be less faces to worry about.
-
 **Add a parent object**
 
 When importing objects they will be added as children to a new root object. This makes the Outliner-view much more usable after importing models that might contain hundreds of separate objects. It also makes manipulating the imported objects easier because you only have to select one object when you want to translate or manipulate the imported model.
