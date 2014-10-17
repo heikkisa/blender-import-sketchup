@@ -63,25 +63,19 @@ def create_ktree(mesh):
     kdt.balance()
     return kdt
 
-def contains_all(container, values):
-    for v in values:
-        if not v in container:
-            return False
-    return True
-
 def find_vertex_duplicate_faces(mesh, kdt, face):
-    matches = []
+    matches = set()
     for i in face.vertices:
         for (co, index, dist) in kdt.find_range(mesh.data.vertices[i].co, DUPLICATE_THRESHOLD):
             if index != i:
-                matches.append(index)
+                matches.add(index)
 
     results = []
     if len(matches) > 0:
         for poly in mesh.data.polygons:
-            if poly.index != face.index:
-                if contains_all(matches, poly.vertices):
-                    results.append(poly.index)
+            if poly.index != face.index and matches.issuperset(poly.vertices):
+                #Both faces share vertex locations so there might be z-fighting.
+                results.append(poly.index)
 
     return results
 
