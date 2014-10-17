@@ -2,7 +2,7 @@
 bl_info = {
     "name": "SketchUp Collada and KMZ format",
     "author": "Heikki Salo",
-    "version": (1, 0, 1),
+    "version": (1, 0, 2),
     "blender": (2, 70, 0),
     "location": "File > Import-Export",
     "description": "Import SketchUp .dae and .kmz files",
@@ -33,16 +33,18 @@ def extract_kmz(filepath, target):
     kmz = zipfile.ZipFile(filepath)
     kmz.extractall(target)
 
-def find_colladas(temp_dir):
-    results = []
+def find_collada(temp_dir):
     for root, dirs, files in os.walk(temp_dir):
         for name in files:
             if name.lower().endswith(".dae"):
-                results.append(os.path.join(root, name))
-    return results
+                return os.path.join(root, name)
+    return "NOT_FOUND"
 
 def get_images():
     return set(bpy.data.images[:])
+
+def get_imported_models(context):
+    return [m for m in context.selected_objects if m.type == "MESH"]
 
 def pack_loaded_images(old_images):
     new_images = get_images()
@@ -77,47 +79,45 @@ def find_best_face(mesh, indices):
 
     return best
 
-def fix_faces():
+def fix_faces(context, models):
     #See http://www.elysiun.com/forum/showthread.php?278694-how-to-remove-doubled-faces-that-allready-have-the-same-vertices
-    for obj in bpy.context.selected_objects:
-        if obj.type == "MESH":
-            bpy.data.scenes[0].objects.active = obj #Make obj active to do operations on it
-            bpy.ops.object.mode_set(mode="OBJECT", toggle=False) #Set 3D View to Object Mode (probably redundant)
-            bpy.ops.object.mode_set(mode="EDIT", toggle=False) #Set 3D View to Edit Mode
-            bpy.context.tool_settings.mesh_select_mode = [False, False, True] #Set to face select in 3D View Editor
-            bpy.ops.mesh.select_all(action="DESELECT") #Make sure all faces in mesh are unselected
+    for i, obj in enumerate(models):
+        print("Processing object %i of %i" % (i + 1, len(models)))
+        bpy.data.scenes[0].objects.active = obj #Make obj active to do operations on it
+        bpy.ops.object.mode_set(mode="OBJECT", toggle=False) #Set 3D View to Object Mode (probably redundant)
+        bpy.ops.object.mode_set(mode="EDIT", toggle=False) #Set 3D View to Edit Mode
+        context.tool_settings.mesh_select_mode = [False, False, True] #Set to face select in 3D View Editor
+        bpy.ops.mesh.select_all(action="DESELECT") #Make sure all faces in mesh are unselected
+        bpy.ops.object.mode_set(mode="OBJECT", toggle=False) #You have to be in object mode to select faces
 
-            bpy.ops.object.mode_set(mode="OBJECT", toggle=False) #You have to be in object mode to select faces
+        duplicates = find_duplicate_faces(obj)
+        for face in duplicates:
+            indices = duplicates[face]
+            for index in indices:
+                obj.data.polygons[index].select = True
 
-            duplicates = find_duplicate_faces(obj)
-            for face in duplicates:
-                indices = duplicates[face]
-                for index in indices:
-                    obj.data.polygons[index].select = True
+            #Save the best face
+            obj.data.polygons[find_best_face(obj, indices)].select = False
 
-                #Save the best face
-                obj.data.polygons[find_best_face(obj, indices)].select = False
+        bpy.ops.object.mode_set(mode="EDIT", toggle=False)      #Set to Edit Mode AGAIN
+        bpy.ops.mesh.delete(type="FACE")                        #Delete double faces
+        bpy.ops.mesh.select_all(action="SELECT")
+        bpy.ops.mesh.normals_make_consistent(inside=False)      #Recalculate normals
+        bpy.ops.mesh.remove_doubles(threshold=0.0001, use_unselected=False) #Remove doubles
+        bpy.ops.mesh.normals_make_consistent(inside=False)      #Recalculate normals (this one or two lines above is redundant)
+        bpy.ops.object.mode_set(mode="OBJECT", toggle=False)    #Set to Object Mode AGAIN
 
-            bpy.ops.object.mode_set(mode="EDIT", toggle=False)      #Set to Edit Mode AGAIN
-            bpy.ops.mesh.delete(type="FACE")                        #Delete double faces
-            bpy.ops.mesh.select_all(action="SELECT")
-            bpy.ops.mesh.normals_make_consistent(inside=False)      #Recalculate normals
-            bpy.ops.mesh.remove_doubles(threshold=0.0001, use_unselected=False) #Remove doubles
-            bpy.ops.mesh.normals_make_consistent(inside=False)      #Recalculate normals (this one or two lines above is redundant)
-            bpy.ops.object.mode_set(mode="OBJECT", toggle=False)    #Set to Object Mode AGAIN
-
-def reparent(object_name):
+def reparent(context, models, root_name):
     mesh = bpy.data.meshes.new("Placeholder")
-    root = bpy.data.objects.new(object_name, mesh)
-    bpy.context.scene.objects.link(root)
+    root = bpy.data.objects.new(root_name, mesh)
+    context.scene.objects.link(root)
 
-    for obj in bpy.context.selected_objects:
+    for obj in models:
         if not obj.parent:
             obj.parent = root
 
-def import_colladas(paths):
-    for path in paths:
-        bpy.ops.wm.collada_import(filepath=path)
+def import_collada(path):
+    bpy.ops.wm.collada_import(filepath=path)
 
 def load(operator, context, **args):
     filepath = args["filepath"]
@@ -137,21 +137,22 @@ def load(operator, context, **args):
 
         cleanup_kmz(temp_dir)
         extract_kmz(filepath, temp_dir)
-        import_colladas(find_colladas(temp_dir))
+        import_collada(find_collada(temp_dir))
     elif ext == ".dae":
-        #Only one file
-        import_colladas([filepath])
+        import_collada(filepath)
     else:
         raise RuntimeError("Unknown extension: %s" % ext)
 
+    models = get_imported_models(context)
+
     if fix_duplicate_faces:
-        fix_faces()
+        fix_faces(context, models)
 
     if pack_images:
         pack_loaded_images(old_images)
 
     if add_parent:
-        reparent(name)
+        reparent(context, models, name)
 
     return {"FINISHED"}
 
