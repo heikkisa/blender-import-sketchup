@@ -36,7 +36,7 @@ Attempts to remove duplicate vertices. This tries to find faces that don't actua
 
 **Validate models**
 
-Validates the imported modles to make sure they are sane. Altough it sounds like enabling this always would be a good idea sometimes the fixes that the validation makes can break the model quite badly. Of course the alternative is that you have an invalid model which works fine most of the time but can crash the whole application if you try to perform certain operations.
+Validates the imported modes to make sure that they are sane. Although it sounds like enabling this always would be a good idea sometimes the fixes that the validation makes can break the model quite badly. Of course the alternative is that you have an invalid model which works fine most of the time but can crash the whole application if you try to perform certain operations on it.
 
 **Add a parent object**
 
@@ -53,7 +53,7 @@ The grim fact is that 3D model exporters and importers can be quite unreliable w
 
 **1. Some objects are missing from the imported scene**
 
-When you export models from SketchUp you should usually select them all (Edit -> Select All) and *Explode* (Edit -> Component -> Explode) them before exporting. Importantly some objects might have to be exploded multimple times before they are exported in a reasonable way. I usually explode everything once, then export and import the results into Blender. If I see that something important is missing I explode those missing objects again in the SketchUp and do a new export. Then I repeat that until everything looks good enough or something goes horribly wrong. Try not to explode objects any more than you have to, otherwise the scene triangle count can increase a lot without any visible benefits. 
+When you export models from SketchUp you should usually select them all (Edit -> Select All) and *Explode* (Edit -> Component -> Explode) them before exporting. Importantly some objects might have to be exploded multiple times before they are exported in a reasonable way. I usually explode everything once, then export and import the results into Blender. If I see that something important is missing I explode those missing objects again in the SketchUp and do a new export. Then I repeat that until everything looks good enough or something goes horribly wrong. Try not to explode objects any more than you have to, otherwise the scene triangle count can increase a lot without any visible benefits.
 
 **2. Some faces have lost their textures**
 
