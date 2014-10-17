@@ -62,8 +62,8 @@ def pack_loaded_images(old_images):
 def create_ktree(mesh):
     size = len(mesh.data.vertices)
     kdt = mathutils.kdtree.KDTree(size)
-    for i, v in enumerate(mesh.data.vertices):
-        kdt.insert(v.co, i)
+    for v in mesh.data.vertices:
+        kdt.insert(v.co, v.index)
     kdt.balance()
     return kdt
 
