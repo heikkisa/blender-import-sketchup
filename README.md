@@ -32,7 +32,7 @@ Attempts to remove duplicate faces. This is important because otherwise it can l
 
 **Fix duplicate vertices**
 
-Attempts to remove duplicate vertices. This tries to find faces that don't actually share vertices but still form duplicated geometry. This can be extremely slow on large models. You can open the Blender System Console before running the import script and see some progress feedback while the import is running.
+Attempts to remove duplicate vertices. This tries to find faces that don't actually share vertices but still form duplicated geometry. This can be extremely slow on large models. You can open the Blender System Console before running the import script and see some progress feedback while the import is running. Note that this option is very different from Blender edit mode command "Remove doubles" although the basic idea is similar.
 
 **Validate models**
 
@@ -70,3 +70,7 @@ Depending from SketchUp version and objects some models might import without a p
 **5. Importing is slooooow**
 
 The option to fix duplicate faces can take some time, it is not very optimized (feel free to contribute improvements). Also importing into a scene that has a lot of existing stuff in it is slower. One good way is to import big models into a new, empty .blend-file. You can save this to a new .blend-file and use Blender "File -> Append" functionality in your other files to link to that object. I tend to have a collection of "component" .blend-files which contain common models which I then append into the actual scenes that I want to render.
+
+**6. Blender crashes during import**
+
+If the imported model is crazy enough (not unusual for exported SketchUp models) it can crash Blender. Try to enable "Validate models".
