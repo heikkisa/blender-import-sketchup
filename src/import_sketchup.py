@@ -2,7 +2,7 @@
 bl_info = {
     "name": "SketchUp Collada and KMZ format",
     "author": "Heikki Salo",
-    "version": (1, 0, 3),
+    "version": (1, 0, 4),
     "blender": (2, 70, 0),
     "location": "File > Import-Export",
     "description": "Import SketchUp .dae and .kmz files",
@@ -119,9 +119,13 @@ def find_best_face(mesh, indices):
 
     return best
 
-def fix_models(context, models, fix_duplicate_vertices):
+def fix_models(context, models, fix_duplicate_vertices, validate_models):
     for i, obj in enumerate(models):
         print("Processing object %i of %i" % (i + 1, len(models)))
+
+        if validate_models and obj.data.validate():
+            print("Invalid mesh validated: %s" % obj.name)
+
         bpy.data.scenes[0].objects.active = obj #Make obj active to do operations on it
         bpy.ops.object.mode_set(mode="OBJECT", toggle=False) #Set 3D View to Object Mode (probably redundant)
         bpy.ops.object.mode_set(mode="EDIT", toggle=False) #Set 3D View to Edit Mode
@@ -141,10 +145,8 @@ def fix_models(context, models, fix_duplicate_vertices):
         bpy.ops.object.mode_set(mode="EDIT", toggle=False)      #Set to Edit Mode AGAIN
         bpy.ops.mesh.delete(type="FACE")                        #Delete double faces
         bpy.ops.mesh.select_all(action="SELECT")
-
-        if not fix_duplicate_vertices:
-            bpy.ops.mesh.remove_doubles(threshold=DUPLICATE_THRESHOLD, use_unselected=False) #Remove doubles
-
+        bpy.ops.mesh.normals_make_consistent(inside=False)      #Recalculate normals
+        bpy.ops.mesh.remove_doubles(threshold=DUPLICATE_THRESHOLD, use_unselected=False) #Remove doubles
         bpy.ops.mesh.normals_make_consistent(inside=False)      #Recalculate normals (this one or two lines above is redundant)
         bpy.ops.object.mode_set(mode="OBJECT", toggle=False)    #Set to Object Mode AGAIN
 
@@ -164,6 +166,7 @@ def load(operator, context, **args):
     filepath = args["filepath"]
     fix_duplicate_faces = args["fix_duplicate_faces"]
     fix_duplicate_vertices = args["fix_duplicate_vertices"]
+    validate_models = args["validate_models"]
     add_parent = args["add_parent"]
     pack_images = args["pack_images"]
 
@@ -188,7 +191,7 @@ def load(operator, context, **args):
     models = get_imported_models(context)
 
     if fix_duplicate_faces:
-        fix_models(context, models, fix_duplicate_vertices)
+        fix_models(context, models, fix_duplicate_vertices, validate_models)
 
     if pack_images:
         pack_loaded_images(old_images)
@@ -220,6 +223,11 @@ class ImportSketchUp(bpy.types.Operator, ImportHelper):
             description="Remove duplicate vertices from imported objects.",
             default=False)
 
+    validate_models = BoolProperty(
+            name="Validate models",
+            description="Validate imported models to make sure they are sane",
+            default=False)
+
     add_parent = BoolProperty(
             name="Add a parent object",
             description="Add a parent root object for imported objects.",
@@ -242,6 +250,10 @@ class ImportSketchUp(bpy.types.Operator, ImportHelper):
         row = col.row()
         row.enabled = self.fix_duplicate_faces
         row.prop(self, "fix_duplicate_vertices")
+
+        row = col.row()
+        row.enabled = self.fix_duplicate_faces
+        row.prop(self, "validate_models")
 
         col.prop(self, "add_parent")
         col.prop(self, "pack_images")

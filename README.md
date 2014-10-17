@@ -34,6 +34,10 @@ Attempts to remove duplicate faces. This is important because otherwise it can l
 
 Attempts to remove duplicate vertices. This tries to find faces that don't actually share vertices but still form duplicated geometry. This can be extremely slow on large models. You can open the Blender System Console before running the import script and see some progress feedback while the import is running.
 
+**Validate models**
+
+Validates the imported modles to make sure they are sane. Altough it sounds like enabling this always would be a good idea sometimes the fixes that the validation makes can break the model quite badly. Of course the alternative is that you have an invalid model which works fine most of the time but can crash the whole application if you try to perform certain operations.
+
 **Add a parent object**
 
 When importing objects they will be added as children to a new root object. This makes the Outliner-view much more usable after importing models that might contain hundreds of separate objects. It also makes manipulating the imported objects easier because you only have to select one object when you want to translate or manipulate the imported model.
