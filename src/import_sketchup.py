@@ -2,7 +2,7 @@
 bl_info = {
     "name": "SketchUp Collada and KMZ format",
     "author": "Heikki Salo",
-    "version": (1, 0, 2),
+    "version": (1, 0, 3),
     "blender": (2, 70, 0),
     "location": "File > Import-Export",
     "description": "Import SketchUp .dae and .kmz files",
@@ -10,12 +10,15 @@ bl_info = {
 }
 
 import bpy
+import mathutils
 from bpy.props import StringProperty, BoolProperty
 from bpy_extras.io_utils import ImportHelper, ExportHelper
 
 import zipfile
 import shutil
 import os
+
+DUPLICATE_THRESHOLD = 0.0001
 
 def cleanup_kmz(temp_dir):
     #Ignore all file related errors
@@ -52,7 +55,41 @@ def pack_loaded_images(old_images):
         if img not in old_images:
             img.pack()
 
-def find_duplicate_faces(mesh):
+def create_ktree(mesh):
+    size = len(mesh.data.vertices)
+    kdt = mathutils.kdtree.KDTree(size)
+    for i, v in enumerate(mesh.data.vertices):
+        kdt.insert(v.co, i)
+    kdt.balance()
+    return kdt
+
+def contains_all(container, values):
+    for v in values:
+        if not v in container:
+            return False
+    return True
+
+def find_vertex_duplicate_faces(mesh, kdt, face):
+    matches = []
+    for i in face.vertices:
+        for (co, index, dist) in kdt.find_range(mesh.data.vertices[i].co, DUPLICATE_THRESHOLD):
+            if index != i:
+                matches.append(index)
+
+    results = []
+    if len(matches) > 0:
+        for poly in mesh.data.polygons:
+            if poly.index != face.index:
+                if contains_all(matches, poly.vertices):
+                    results.append(poly.index)
+
+    return results
+
+def find_duplicate_faces(mesh, fix_duplicate_vertices):
+    kdt = None
+    if fix_duplicate_vertices:
+        kdt = create_ktree(mesh)
+
     found = {}
     for face in mesh.data.polygons:
         facevertsorted = str(sorted(face.vertices[:]))
@@ -60,6 +97,9 @@ def find_duplicate_faces(mesh):
             found[facevertsorted].append(face.index)
         else:
             found[facevertsorted] = [face.index]
+
+        if fix_duplicate_vertices:
+            found[facevertsorted].extend(find_vertex_duplicate_faces(mesh, kdt, face))
 
     results = {}
     for k, v in found.items():
@@ -79,8 +119,7 @@ def find_best_face(mesh, indices):
 
     return best
 
-def fix_faces(context, models):
-    #See http://www.elysiun.com/forum/showthread.php?278694-how-to-remove-doubled-faces-that-allready-have-the-same-vertices
+def fix_models(context, models, fix_duplicate_vertices):
     for i, obj in enumerate(models):
         print("Processing object %i of %i" % (i + 1, len(models)))
         bpy.data.scenes[0].objects.active = obj #Make obj active to do operations on it
@@ -90,7 +129,7 @@ def fix_faces(context, models):
         bpy.ops.mesh.select_all(action="DESELECT") #Make sure all faces in mesh are unselected
         bpy.ops.object.mode_set(mode="OBJECT", toggle=False) #You have to be in object mode to select faces
 
-        duplicates = find_duplicate_faces(obj)
+        duplicates = find_duplicate_faces(obj, fix_duplicate_vertices)
         for face in duplicates:
             indices = duplicates[face]
             for index in indices:
@@ -102,8 +141,10 @@ def fix_faces(context, models):
         bpy.ops.object.mode_set(mode="EDIT", toggle=False)      #Set to Edit Mode AGAIN
         bpy.ops.mesh.delete(type="FACE")                        #Delete double faces
         bpy.ops.mesh.select_all(action="SELECT")
-        bpy.ops.mesh.normals_make_consistent(inside=False)      #Recalculate normals
-        bpy.ops.mesh.remove_doubles(threshold=0.0001, use_unselected=False) #Remove doubles
+
+        if not fix_duplicate_vertices:
+            bpy.ops.mesh.remove_doubles(threshold=DUPLICATE_THRESHOLD, use_unselected=False) #Remove doubles
+
         bpy.ops.mesh.normals_make_consistent(inside=False)      #Recalculate normals (this one or two lines above is redundant)
         bpy.ops.object.mode_set(mode="OBJECT", toggle=False)    #Set to Object Mode AGAIN
 
@@ -122,6 +163,7 @@ def import_collada(path):
 def load(operator, context, **args):
     filepath = args["filepath"]
     fix_duplicate_faces = args["fix_duplicate_faces"]
+    fix_duplicate_vertices = args["fix_duplicate_vertices"]
     add_parent = args["add_parent"]
     pack_images = args["pack_images"]
 
@@ -146,7 +188,7 @@ def load(operator, context, **args):
     models = get_imported_models(context)
 
     if fix_duplicate_faces:
-        fix_faces(context, models)
+        fix_models(context, models, fix_duplicate_vertices)
 
     if pack_images:
         pack_loaded_images(old_images)
@@ -173,6 +215,11 @@ class ImportSketchUp(bpy.types.Operator, ImportHelper):
             description="Remove duplicate faces from imported objects. Can be slow.",
             default=True)
 
+    fix_duplicate_vertices = BoolProperty(
+            name="Fix duplicate vertices (SLOW)",
+            description="Remove duplicate vertices from imported objects.",
+            default=False)
+
     add_parent = BoolProperty(
             name="Add a parent object",
             description="Add a parent root object for imported objects.",
@@ -191,6 +238,11 @@ class ImportSketchUp(bpy.types.Operator, ImportHelper):
         layout = self.layout
         col = layout.column(align=True)
         col.prop(self, "fix_duplicate_faces")
+
+        row = col.row()
+        row.enabled = self.fix_duplicate_faces
+        row.prop(self, "fix_duplicate_vertices")
+
         col.prop(self, "add_parent")
         col.prop(self, "pack_images")
 

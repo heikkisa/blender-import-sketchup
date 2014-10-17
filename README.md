@@ -30,6 +30,10 @@ Importer Options
 
 Attempts to remove duplicate faces. This is important because otherwise it can lead to some pretty nasty z-fighting which usually causes black shadow "acne" or artifacts when rendering the scene with lights. Most of the time this should be left enabled. This option is not very optimized so it might take a while when importing large or complex models.
 
+**Fix duplicate vertices**
+
+Attempts to remove duplicate vertices. This tries to find faces that don't actually share vertices but still form duplicated geometry. This can be extremely slow on large models. You can open the Blender System Console before running the import script and see some progress feedback while the import is running.
+
 **Add a parent object**
 
 When importing objects they will be added as children to a new root object. This makes the Outliner-view much more usable after importing models that might contain hundreds of separate objects. It also makes manipulating the imported objects easier because you only have to select one object when you want to translate or manipulate the imported model.
@@ -49,11 +53,11 @@ When you export models from SketchUp you should usually select them all (Edit ->
 
 **2. Some faces have lost their textures**
 
-Happens occasionally. One workaround is to select all faces that should be textured and texture map them again. If the surface is large and texture is not very complex it is sometimes enough to unwrap them all and scale the texture coordinates until it looks reasonable.
+Happens occasionally, try to enable "Fix duplicate vertices". One workaround is to select all faces that should be textured and texture map them again. If the surface is large and texture is not very complex it is sometimes enough to unwrap them all and scale the texture coordinates until it looks reasonable.
 
 **3. Some faces have wrong material**
 
-Happens occasionally. Usually it is easiest to use the face selection mode, select invalid faces and assign the correct material by hand. This might have messed up the face texture coordinates in which case you might have to remap those faces. If you are feeling lazy you could select all faces and then apply the same solution as to problem 2 (unwrap all).
+Happens occasionally, try to enable "Fix duplicate vertices". Usually it is easiest to use the face selection mode, select invalid faces and assign the correct material by hand. This might have messed up the face texture coordinates in which case you might have to remap those faces. If you are feeling lazy you could select all faces and then apply the same solution as to problem 2 (unwrap all).
 
 **4. Some models import correctly, some look terrible**
 
