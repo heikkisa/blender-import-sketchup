@@ -46,8 +46,12 @@ def find_collada(temp_dir):
 def get_images():
     return set(bpy.data.images[:])
 
-def get_imported_models(context):
-    return [m for m in context.selected_objects if m.type == "MESH"]
+def get_imported_objects(context):
+    #Collada importer leaves imported objects selected
+    return [m for m in context.selected_objects]
+
+def filter_objects(objects, tp):
+    return [obj for obj in objects if obj.type == tp]
 
 def pack_loaded_images(old_images):
     new_images = get_images()
@@ -182,16 +186,16 @@ def load(operator, context, **args):
     else:
         raise RuntimeError("Unknown extension: %s" % ext)
 
-    models = get_imported_models(context)
+    objects = get_imported_objects(context)
 
     if fix_duplicate_faces:
-        fix_models(context, models, fix_duplicate_vertices, validate_models)
+        fix_models(context, filter_objects(objects, "MESH"), fix_duplicate_vertices, validate_models)
 
     if pack_images:
         pack_loaded_images(old_images)
 
     if add_parent:
-        reparent(context, models, name)
+        reparent(context, objects, name)
 
     return {"FINISHED"}
 
