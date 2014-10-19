@@ -124,7 +124,7 @@ def fix_models(context, models, fix_duplicate_vertices, validate_models):
         if validate_models and obj.data.validate():
             print("Invalid mesh validated: %s" % obj.name)
 
-        bpy.data.scenes[0].objects.active = obj #Make obj active to do operations on it
+        context.scene.objects.active = obj #Make obj active to do operations on it
         bpy.ops.object.mode_set(mode="OBJECT", toggle=False) #Set 3D View to Object Mode (probably redundant)
         bpy.ops.object.mode_set(mode="EDIT", toggle=False) #Set 3D View to Edit Mode
         context.tool_settings.mesh_select_mode = [False, False, True] #Set to face select in 3D View Editor
