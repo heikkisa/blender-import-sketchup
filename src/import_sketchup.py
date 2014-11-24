@@ -19,6 +19,7 @@ import shutil
 import os
 
 DUPLICATE_THRESHOLD = 0.0001
+RENAME_UV_MAP_NAME = "imported_map"
 
 def cleanup_kmz(temp_dir):
     #Ignore all file related errors
@@ -148,6 +149,13 @@ def fix_models(context, models, fix_duplicate_vertices, validate_models):
         bpy.ops.mesh.normals_make_consistent(inside=False)      #Recalculate normals (this one or two lines above is redundant)
         bpy.ops.object.mode_set(mode="OBJECT", toggle=False)    #Set to Object Mode AGAIN
 
+def rename_uv_texture_maps(models, name):
+    for m in models:
+        for uv in m.data.uv_textures:
+            #Usually there should only be one
+            uv.name = name
+            break
+
 def reparent(context, models, root_name):
     mesh = bpy.data.meshes.new("Placeholder")
     root = bpy.data.objects.new(root_name, mesh)
@@ -166,6 +174,7 @@ def load(operator, context, **args):
     fix_duplicate_vertices = args["fix_duplicate_vertices"]
     validate_models = args["validate_models"]
     add_parent = args["add_parent"]
+    rename_uvs = args["rename_uvs"]
     pack_images = args["pack_images"]
 
     name = os.path.split(filepath)[-1].split(".")[0]
@@ -187,9 +196,13 @@ def load(operator, context, **args):
         raise RuntimeError("Unknown extension: %s" % ext)
 
     objects = get_imported_objects(context)
+    models = filter_objects(objects, "MESH")
+
+    if rename_uvs:
+        rename_uv_texture_maps(models, RENAME_UV_MAP_NAME)
 
     if fix_duplicate_faces:
-        fix_models(context, filter_objects(objects, "MESH"), fix_duplicate_vertices, validate_models)
+        fix_models(context, models, fix_duplicate_vertices, validate_models)
 
     if pack_images:
         pack_loaded_images(old_images)
@@ -231,6 +244,11 @@ class ImportSketchUp(bpy.types.Operator, ImportHelper):
             description="Add a parent root object for imported objects.",
             default=True)
 
+    rename_uvs = BoolProperty(
+            name="Rename UV maps",
+            description="Renames UV maps for better join functionality.",
+            default=True)
+
     pack_images = BoolProperty(
             name="Pack images",
             description="Pack imported images into the .blend file.",
@@ -254,6 +272,7 @@ class ImportSketchUp(bpy.types.Operator, ImportHelper):
         row.prop(self, "validate_models")
 
         col.prop(self, "add_parent")
+        col.prop(self, "rename_uvs")
         col.prop(self, "pack_images")
 
 def menu_func_import(self, context):

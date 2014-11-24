@@ -42,6 +42,10 @@ Validates the imported modes to make sure that they are sane. Although it sounds
 
 When importing objects they will be added as children to a new root object. This makes the Outliner-view much more usable after importing models that might contain hundreds of separate objects. It also makes manipulating the imported objects easier because you only have to select one object when you want to translate or manipulate the imported model.
 
+**Rename UV maps**
+
+Renames all imported mesh UV maps into a common name. This is useful if you want to later join some of the objects together for easier manipulation etc. If the UV maps between the models don't have the same name (and most of the time they don't when exported from SketchUp) some of the UV data is going to be lost when joining objects.
+
 **Pack images**
 
 Packs imported images inside the .blend-file instead of loading them from the file system. Increases the saved file size, but makes the .blend-files more "robust" (you can move and share them without worrying about the file references going invalid etc.).
